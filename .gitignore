@@ -1,6 +1,6 @@
 .vscode
 /venv_detect_code_bar
-*.txt
+*.ini
 /__pycache__/
 *.pyc
 *.pyo
