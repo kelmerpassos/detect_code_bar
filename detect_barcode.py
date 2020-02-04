@@ -1,21 +1,24 @@
 import os
+from os.path import isdir
+
 from cv2 import cv2
 from pyzbar.pyzbar import decode
 
 
 class BarCode:
-    path_input = 'input_img'
-    path_output = 'output_code'
+    INPUT = 'input_img'
+    OUTPUT = 'output_code'
 
     def __init__(self):
         super(BarCode, self).__init__()
+        self.validade_paths()
         input_path = [ # carrega todos os arquivos do input
-            {'path': os.path.join(self.path_input, name), 'name': name} 
-            for name in os.listdir(self.path_input)
+            {'path': os.path.join(self.INPUT, name), 'name': name} 
+            for name in os.listdir(self.INPUT)
         ]  
         output_path = [ # carrega todos os arquivos do output
-            {'path': os.path.join(self.path_output, name), 'name': name}
-            for name in os.listdir(self.path_output)
+            {'path': os.path.join(self.OUTPUT, name), 'name': name}
+            for name in os.listdir(self.OUTPUT)
         ]  
         self.input_files = [ # filtra apenas os arquivos .bmp
             input_arq for input_arq in input_path 
@@ -38,7 +41,14 @@ class BarCode:
         ]
         if len(output_file) == 0:
             return True
-        return False  
+        return False 
+
+    def validade_paths(self):
+        if not os.path.isdir(self.INPUT):
+            os.mkdir(self.INPUT)
+            exit()
+        if not os.path.isdir(self.OUTPUT):
+            os.mkdir(self.OUTPUT)
 
     def extract_barcode(self):
         for data in self.valid_files:
