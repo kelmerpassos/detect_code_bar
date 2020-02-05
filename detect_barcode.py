@@ -1,6 +1,6 @@
 import os
 from os.path import isdir
-
+from sys import exit
 from cv2 import cv2
 from pyzbar.pyzbar import decode
 
@@ -46,18 +46,23 @@ class BarCode:
     def validade_paths(self):
         if not os.path.isdir(self.INPUT):
             os.mkdir(self.INPUT)
-            exit()
+            if not os.path.isdir(self.OUTPUT):
+                os.mkdir(self.OUTPUT)
+            sys.exit()
         if not os.path.isdir(self.OUTPUT):
             os.mkdir(self.OUTPUT)
 
     def extract_barcode(self):
         for data in self.valid_files:
             image = cv2.imread(data['path']) 
-            name = data['name'][:-4]      
-            if image is not None:
-                detectedBarcodes = decode(image)
-            else:
-                exit()
+            name = data['name'][:-4] 
+            detectedBarcodes = decode(image)     
+            if len(detectedBarcodes) == 0:
+                bar_file = open(f'output_code\/bar-{name}.ini', 'w')
+                bar_file.write('None')
+                bar_file.close()
+                self.prompt_barcode(name, 'None', 'None')
+                next
 
             for barcode in detectedBarcodes:    
                 (x, y, w, h) = barcode.rect
