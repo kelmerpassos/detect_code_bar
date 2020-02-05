@@ -69,6 +69,10 @@ class BarCode:
                 cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5)
                 bar_file = open(f'output_code\/bar-{name}.ini', 'w')
                 code = barcode.data.decode('utf-8')
+                try:
+                    int(code)
+                except ValueError:
+                    code = 'None'
                 bar_file.write(code)
                 bar_file.close()
                 self.prompt_barcode(name, code, barcode.type)
@@ -76,7 +80,7 @@ class BarCode:
     def prompt_barcode(self, name, code, type_bar):
         print(f'Arquivo: {name}')
         print(f'Tipo-bar: {type_bar}')
-        print(f'Name: {name}')
+        print(f'Code: {code}')
         print('________________________________')
 
 
