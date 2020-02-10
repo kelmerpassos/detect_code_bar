@@ -56,26 +56,26 @@ class BarCode:
         for data in self.valid_files:
             image = cv2.imread(data['path']) 
             name = data['name'][:-4] 
-            detectedBarcodes = decode(image)     
-            if len(detectedBarcodes) == 0:
-                bar_file = open(f'output_code\/bar-{name}.ini', 'w')
-                bar_file.write('None')
-                bar_file.close()
-                self.prompt_barcode(name, 'None', 'None')
-                next
-
+            detectedBarcodes = decode(image)
+            code = 'None'
+            code_type = 'None' 
+            bar_file = open(f'output_code\/bar-{name}.ini', 'w') 
             for barcode in detectedBarcodes:    
                 (x, y, w, h) = barcode.rect
-                cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5)
-                bar_file = open(f'output_code\/bar-{name}.ini', 'w')
-                code = barcode.data.decode('utf-8')
+                cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5) 
+                code_type = barcode.type
+                if code_type == 'CODE39':               
+                    code = barcode.data.decode('utf-8')
                 try:
                     int(code)
+                    break
                 except ValueError:
                     code = 'None'
-                bar_file.write(code)
-                bar_file.close()
-                self.prompt_barcode(name, code, barcode.type)
+
+            bar_file.write(code)
+            bar_file.close()
+            self.prompt_barcode(name, code, code_type)
+                
 
     def prompt_barcode(self, name, code, type_bar):
         print(f'Arquivo: {name}')
