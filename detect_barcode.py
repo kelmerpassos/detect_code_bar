@@ -1,4 +1,5 @@
 import os
+import shutil
 from os.path import isdir
 from sys import exit
 from cv2 import cv2
@@ -26,22 +27,8 @@ class BarCode:
         ]
         self.output_files = [ # filtra apenas os arquivos .ini
             output_arq for output_arq in output_path 
-            if os.path.isfile(output_arq['path']) and (output_arq['path'].lower().endswith('.ini'))
-        ]
-        self.valid_files = [
-            valid_arq for valid_arq in self.input_files 
-            if self.validate_file(valid_arq)
-        ]    
-
-    def validate_file(self, valid_arq):
-        name = valid_arq['name']
-        output_file = [
-            output for output in self.output_files 
-            if output['name'] == f'bar-{name[:-4]}.ini'
-        ]
-        if len(output_file) == 0:
-            return True
-        return False 
+            if os.path.isfile(output_arq['path']) and (output_arq['path'].lower().endswith('.tif'))
+        ] 
 
     def validade_paths(self):
         if not os.path.isdir(self.INPUT):
@@ -53,13 +40,16 @@ class BarCode:
             os.mkdir(self.OUTPUT)
 
     def extract_barcode(self):
-        for data in self.valid_files:
+        log_error = {}
+        begin_txt = open(os.path.join(self.OUTPUT, 'begin.text'))
+        begin_txt.write(str(len(self.input_files))) 
+        begin_txt.close()     
+        for data in self.input_files:
             image = cv2.imread(data['path']) 
             name = data['name'][:-4] 
             detectedBarcodes = decode(image)
             code = 'None'
-            code_type = 'None' 
-            bar_file = open(f'output_code\/bar-{name}.ini', 'w') 
+            code_type = 'None'     
             for barcode in detectedBarcodes:    
                 (x, y, w, h) = barcode.rect
                 cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5) 
@@ -68,14 +58,15 @@ class BarCode:
                     code = barcode.data.decode('utf-8')
                 try:
                     int(code)
+                    shutil.copy(data['path'], os.path.join(self.OUTPUT, f'{code}.tif'))
                     break
                 except ValueError:
-                    code = 'None'
-
-            bar_file.write(code)
-            bar_file.close()
+                    log_error.append(data['path'])
             self.prompt_barcode(name, code, code_type)
-                
+        end_txt = open(os.path.join(self.OUTPUT, 'end.text')) 
+        for txt in log_error:
+            end_txt.write(txt)
+        end_txt.close()        
 
     def prompt_barcode(self, name, code, type_bar):
         print(f'Arquivo: {name}')
