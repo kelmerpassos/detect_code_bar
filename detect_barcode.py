@@ -40,8 +40,8 @@ class BarCode:
             os.mkdir(self.OUTPUT)
 
     def extract_barcode(self):
-        log_error = {}
-        begin_txt = open(os.path.join(self.OUTPUT, 'begin.text'))
+        log_error = []
+        begin_txt = open(os.path.join(self.OUTPUT, 'begin.txt'), 'w')
         begin_txt.write(str(len(self.input_files))) 
         begin_txt.close()     
         for data in self.input_files:
@@ -56,6 +56,8 @@ class BarCode:
                 code_type = barcode.type
                 if code_type == 'CODE39':               
                     code = barcode.data.decode('utf-8')
+                else:
+                    break
                 try:
                     int(code)
                     shutil.copy(data['path'], os.path.join(self.OUTPUT, f'{code}.tif'))
@@ -63,7 +65,7 @@ class BarCode:
                 except ValueError:
                     log_error.append(data['path'])
             self.prompt_barcode(name, code, code_type)
-        end_txt = open(os.path.join(self.OUTPUT, 'end.text')) 
+        end_txt = open(os.path.join(self.OUTPUT, 'end.txt'), 'w') 
         for txt in log_error:
             end_txt.write(txt)
         end_txt.close()        
