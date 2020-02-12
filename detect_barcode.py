@@ -43,6 +43,7 @@ class BarCode:
             os.mkdir(self.OUTPUT)
 
     def extract_barcode(self):
+        print('Extraindo código de imagens ...')
         self.log = {'error':[], 'success': [], 'invalid': []}
         begin_txt = open(os.path.join(self.OUTPUT, 'begin.txt'), 'w')
         begin_txt.write(str(len(self.input_files))) 
@@ -60,17 +61,23 @@ class BarCode:
                     code_type = barcode.type
                     if code_type == 'CODE39':               
                         code = barcode.data.decode('utf-8')
+                    else:
+                        code = 'Inválido'
                     try:
                         int(code)
-                        shutil.copy(data['path'], os.path.join(self.EX_OUTPUT, f'{code}.tif'))
-                        if os.path.join(self.OUTPUT, f'{code}.tif') not in self.log['success']:
-                            self.log['success'].append(os.path.join(self.OUTPUT, f'{code}.tif'))
-                        break
+                        if len(code[1:]) == 6:  
+                            shutil.copy(data['path'], os.path.join(self.EX_OUTPUT, f'{code[1:]}.tif'))
+                            if code[1:] not in self.log['success']:
+                                self.log['success'].append(code[1:])
+                            break
+                        else:
+                            if data['path'] not in self.log['error']:
+                                self.log['error'].append(data['path'])
                     except ValueError:
-                        if os.path.join(self.OUTPUT, f'{code}.tif') not in self.log['error']:
+                        if data['path'] not in self.log['error']:
                             self.log['error'].append(data['path'])
             else:
-                if os.path.join(self.OUTPUT, f'{code}.tif') not in self.log['invalid']:
+                if data['path'] not in self.log['invalid']:
                     self.log['invalid'].append(data['path'])
             self.prompt_barcode(name, code, code_type)
         self.finish()
@@ -89,14 +96,11 @@ class BarCode:
         log_txt.write(str(len(self.log['success'])))
         log_txt.close() 
         
-        
-
     def prompt_barcode(self, name, code, type_bar):
         print(f'Arquivo: {name}')
         print(f'Tipo-bar: {type_bar}')
         print(f'Code: {code}')
         print('________________________________')
-
 
 if __name__ == "__main__":       
     bar_code = BarCode()

@@ -1,2 +1,0 @@
-input_img\0001.bmp
-input_img\tmpBarCodeTD2.bmp
