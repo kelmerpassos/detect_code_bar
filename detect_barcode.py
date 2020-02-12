@@ -13,6 +13,9 @@ class BarCode:
     def __init__(self):
         super(BarCode, self).__init__()
         self.validade_paths()
+        for dir_ex in open(os.path.join(self.INPUT, 'dir.txt'), 'r'):
+            self.EX_OUTPUT = dir_ex[:-2]
+            break
         input_path = [ # carrega todos os arquivos do input
             {'path': os.path.join(self.INPUT, name), 'name': name} 
             for name in os.listdir(self.INPUT)
@@ -35,12 +38,12 @@ class BarCode:
             os.mkdir(self.INPUT)
             if not os.path.isdir(self.OUTPUT):
                 os.mkdir(self.OUTPUT)
-            sys.exit()
+            exit()
         if not os.path.isdir(self.OUTPUT):
             os.mkdir(self.OUTPUT)
 
     def extract_barcode(self):
-        log_error = []
+        self.log = {'error':[], 'success': [], 'invalid': []}
         begin_txt = open(os.path.join(self.OUTPUT, 'begin.txt'), 'w')
         begin_txt.write(str(len(self.input_files))) 
         begin_txt.close()     
@@ -49,26 +52,44 @@ class BarCode:
             name = data['name'][:-4] 
             detectedBarcodes = decode(image)
             code = 'None'
-            code_type = 'None'     
-            for barcode in detectedBarcodes:    
-                (x, y, w, h) = barcode.rect
-                cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5) 
-                code_type = barcode.type
-                if code_type == 'CODE39':               
-                    code = barcode.data.decode('utf-8')
-                else:
-                    break
-                try:
-                    int(code)
-                    shutil.copy(data['path'], os.path.join(self.OUTPUT, f'{code}.tif'))
-                    break
-                except ValueError:
-                    log_error.append(data['path'])
+            code_type = 'None'
+            if len(detectedBarcodes) != 0:    
+                for barcode in detectedBarcodes:    
+                    (x, y, w, h) = barcode.rect
+                    cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5) 
+                    code_type = barcode.type
+                    if code_type == 'CODE39':               
+                        code = barcode.data.decode('utf-8')
+                    try:
+                        int(code)
+                        shutil.copy(data['path'], os.path.join(self.EX_OUTPUT, f'{code}.tif'))
+                        if os.path.join(self.OUTPUT, f'{code}.tif') not in self.log['success']:
+                            self.log['success'].append(os.path.join(self.OUTPUT, f'{code}.tif'))
+                        break
+                    except ValueError:
+                        if os.path.join(self.OUTPUT, f'{code}.tif') not in self.log['error']:
+                            self.log['error'].append(data['path'])
+            else:
+                if os.path.join(self.OUTPUT, f'{code}.tif') not in self.log['invalid']:
+                    self.log['invalid'].append(data['path'])
             self.prompt_barcode(name, code, code_type)
-        end_txt = open(os.path.join(self.OUTPUT, 'end.txt'), 'w') 
-        for txt in log_error:
-            end_txt.write(txt)
-        end_txt.close()        
+        self.finish()
+         
+    def finish(self):
+        log_txt = open(os.path.join(self.OUTPUT, 'error.txt'), 'w') 
+        log_txt.writelines([f'{txt}\n' if txt  != self.log['error'][-1] else txt for txt in self.log['error']])
+        log_txt.close() 
+        log_txt = open(os.path.join(self.OUTPUT, 'success.txt'), 'w') 
+        log_txt.writelines([f'{txt}\n' if txt != self.log['success'][-1] else txt for txt in self.log['success']])
+        log_txt.close()  
+        log_txt = open(os.path.join(self.OUTPUT, 'invalid.txt'), 'w') 
+        log_txt.writelines([f'{txt}\n' if txt != self.log['invalid'][-1] else txt for txt in self.log['invalid']])
+        log_txt.close()
+        log_txt = open(os.path.join(self.OUTPUT, 'end.txt'), 'w') 
+        log_txt.write(str(len(self.log['success'])))
+        log_txt.close() 
+        
+        
 
     def prompt_barcode(self, name, code, type_bar):
         print(f'Arquivo: {name}')

@@ -1,1 +1,1 @@
-input_img\0001.bmpinput_img\tmpBarCodeTD2.bmp
+1
