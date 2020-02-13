@@ -1,7 +1,9 @@
 import os
 import shutil
+from asyncio.windows_events import NULL
 from os.path import isdir
 from sys import exit
+
 from cv2 import cv2
 from pyzbar.pyzbar import decode
 
@@ -12,10 +14,7 @@ class BarCode:
 
     def __init__(self):
         super(BarCode, self).__init__()
-        self.validade_paths()
-        for dir_ex in open(os.path.join(self.INPUT, 'dir.txt'), 'r'):
-            self.EX_OUTPUT = dir_ex[:-2]
-            break
+        self.validade_paths()    
         input_path = [ # carrega todos os arquivos do input
             {'path': os.path.join(self.INPUT, name), 'name': name} 
             for name in os.listdir(self.INPUT)
@@ -41,6 +40,20 @@ class BarCode:
             exit()
         if not os.path.isdir(self.OUTPUT):
             os.mkdir(self.OUTPUT)
+        if os.path.isfile(os.path.join(self.INPUT, 'dir.txt')):
+            for dir_ex in open(os.path.join(self.INPUT, 'dir.txt'), 'r'):
+                self.EX_OUTPUT = dir_ex[:-2]
+                if self.EX_OUTPUT.strip(' ') == '':
+                    self.create_dir_default()
+                break
+        else:
+            self.create_dir_default()
+
+    def create_dir_default(self):
+        if not os.path.isdir('ordem'):
+            os.mkdir('ordem')
+            self.EX_OUTPUT = 'ordem'
+
 
     def extract_barcode(self):
         print('Extraindo código de imagens ...')
@@ -54,6 +67,7 @@ class BarCode:
             detectedBarcodes = decode(image)
             code = 'None'
             code_type = 'None'
+            file_error = NULL 
             if len(detectedBarcodes) != 0:    
                 for barcode in detectedBarcodes:    
                     (x, y, w, h) = barcode.rect
@@ -65,17 +79,21 @@ class BarCode:
                         code = 'Inválido'
                     try:
                         int(code)
-                        if len(code[1:]) == 6:  
-                            shutil.copy(data['path'], os.path.join(self.EX_OUTPUT, f'{code[1:]}.tif'))
+                        if len(code[1:]) == 6:        
                             if code[1:] not in self.log['success']:
                                 self.log['success'].append(code[1:])
+
+                                shutil.copy(data['path'], os.path.join(self.EX_OUTPUT, f'{code[1:]}.tif'))
+                            file_error = NULL
                             break
                         else:
                             if data['path'] not in self.log['error']:
-                                self.log['error'].append(data['path'])
+                                file_error = data['path']
                     except ValueError:
                         if data['path'] not in self.log['error']:
-                            self.log['error'].append(data['path'])
+                            file_error = data['path']
+                if file_error is not NULL:
+                    self.log['error'].append(file_error) 
             else:
                 if data['path'] not in self.log['invalid']:
                     self.log['invalid'].append(data['path'])
