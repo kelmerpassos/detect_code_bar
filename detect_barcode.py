@@ -9,51 +9,65 @@ from pyzbar.pyzbar import decode
 
 
 class BarCode:
-    INPUT = 'input_img'
     OUTPUT = 'output_code'
 
     def __init__(self):
         super(BarCode, self).__init__()
-        self.validade_paths()    
+        self.validade_paths()
+        self.get_old_files()    
         input_path = [ # carrega todos os arquivos do input
             {'path': os.path.join(self.INPUT, name), 'name': name} 
             for name in os.listdir(self.INPUT)
-        ]  
-        output_path = [ # carrega todos os arquivos do output
-            {'path': os.path.join(self.OUTPUT, name), 'name': name}
-            for name in os.listdir(self.OUTPUT)
+            if os.path.join(self.INPUT, name).lower() not in self.OLD_FILES
         ]  
         self.input_files = [ # filtra apenas os arquivos .bmp
             input_arq for input_arq in input_path 
             if os.path.isfile(input_arq['path']) and (input_arq['path'].lower().endswith('.bmp'))
         ]
-        self.output_files = [ # filtra apenas os arquivos .ini
-            output_arq for output_arq in output_path 
-            if os.path.isfile(output_arq['path']) and (output_arq['path'].lower().endswith('.tif'))
-        ] 
+        
+    
+    def remove_next(self, text):
+        if text[-1:] == '\n':
+            if text[-2:] == '\\\n':
+                return text[:-2] 
+            return text[:-1]
+        else:
+            return text
 
-    def validade_paths(self):
-        if not os.path.isdir(self.INPUT):
-            os.mkdir(self.INPUT)
-            if not os.path.isdir(self.OUTPUT):
-                os.mkdir(self.OUTPUT)
-            exit()
+    def add_next(self, text):
+        return f'{text}\n'
+    
+    def validade_paths(self):        
         if not os.path.isdir(self.OUTPUT):
             os.mkdir(self.OUTPUT)
-        if os.path.isfile(os.path.join(self.INPUT, 'dir.txt')):
-            for dir_ex in open(os.path.join(self.INPUT, 'dir.txt'), 'r'):
-                self.EX_OUTPUT = dir_ex[:-2]
+        if os.path.isfile(os.path.join(self.OUTPUT, 'dir.txt')):
+            for dir_ex in open(os.path.join(self.OUTPUT, 'dir.txt'), 'r'):
+                self.EX_OUTPUT = self.remove_next(dir_ex)
                 if self.EX_OUTPUT.strip(' ') == '':
-                    self.create_dir_default()
+                    self.EX_OUTPUT = self.create_dir_default('ordem')
                 break
         else:
-            self.create_dir_default()
+            self.EX_OUTPUT = self.create_dir_default('ordem')
+        if os.path.isfile(os.path.join(self.OUTPUT, 'input.txt')):
+            for inp_ex in open(os.path.join(self.OUTPUT, 'input.txt'), 'r'): 
+                self.INPUT = self.remove_next(inp_ex)
+                if self.INPUT.strip(' ') == '':
+                    self.INPUT = self.create_dir_default('input_img')
+                break
+        else:
+            self.INPUT = self.create_dir_default('input_img')
+   
+    def get_old_files(self):
+        if os.path.isfile(os.path.join(self.OUTPUT, 'old_files.txt')):
+            self.OLD_FILES = [self.remove_next(name.lower()) for name in open(os.path.join(self.OUTPUT, 'old_files.txt'), 'r')]
+        else:
+            self.OLD_FILES = ''
 
-    def create_dir_default(self):
-        if not os.path.isdir('ordem'):
-            os.mkdir('ordem')
-            self.EX_OUTPUT = 'ordem'
 
+    def create_dir_default(self, name):
+        if not os.path.isdir(name):
+            os.mkdir(name)
+        return os.path.join(os.path.dirname(os.path.realpath(__file__)),name)
 
     def extract_barcode(self):
         print('Extraindo código de imagens ...')
@@ -102,16 +116,16 @@ class BarCode:
          
     def finish(self):
         log_txt = open(os.path.join(self.OUTPUT, 'error.txt'), 'w') 
-        log_txt.writelines([f'{txt}\n' if txt  != self.log['error'][-1] else txt for txt in self.log['error']])
+        log_txt.writelines([self.add_next(txt) if txt  != self.log['error'][-1] else txt for txt in self.log['error']])
         log_txt.close() 
         log_txt = open(os.path.join(self.OUTPUT, 'success.txt'), 'w') 
-        log_txt.writelines([f'{txt}\n' if txt != self.log['success'][-1] else txt for txt in self.log['success']])
+        log_txt.writelines([self.add_next(txt) if txt != self.log['success'][-1] else txt for txt in self.log['success']])
         log_txt.close()  
         log_txt = open(os.path.join(self.OUTPUT, 'invalid.txt'), 'w') 
-        log_txt.writelines([f'{txt}\n' if txt != self.log['invalid'][-1] else txt for txt in self.log['invalid']])
+        log_txt.writelines([self.add_next(txt) if txt != self.log['invalid'][-1] else txt for txt in self.log['invalid']])
         log_txt.close()
         log_txt = open(os.path.join(self.OUTPUT, 'end.txt'), 'w') 
-        log_txt.write(str(len(self.log['success'])))
+        log_txt.writelines([self.add_next(txt['path']) if txt['path'] != self.input_files[-1]['path'] else txt['path'] for txt in self.input_files])
         log_txt.close() 
         
     def prompt_barcode(self, name, code, type_bar):
