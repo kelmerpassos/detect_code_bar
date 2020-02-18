@@ -139,3 +139,14 @@ if __name__ == "__main__":
     bar_code.extract_barcode()
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    
+'''
+from PIL import Image
+
+img1 = Image.open(open("test2.tiff", 'rb'))
+img2 = Image.open(open("test.tiff", 'rb'))
+
+img1.save('C:\/Users\/Public\/Pictures\/Sample Pictures\/teste.tif',save_all=True,append_images=[img2])
+
+https://www.devmedia.com.br/forum/como-pegar-via-delphi-a-data-de-criacao-do-arquivo/320595
+'''
