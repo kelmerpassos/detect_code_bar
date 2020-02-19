@@ -1,10 +1,12 @@
+import glob
 import os
 import shutil
 from asyncio.windows_events import NULL
-from os.path import isdir
+import io
 from sys import exit
-
 from cv2 import cv2
+from pdf2image import convert_from_path
+from PIL import Image
 from pyzbar.pyzbar import decode
 
 
@@ -13,19 +15,42 @@ class BarCode:
 
     def __init__(self):
         super(BarCode, self).__init__()
-        self.validade_paths()
-        self.get_old_files()    
-        input_path = [ # carrega todos os arquivos do input
+        self.validate_paths()
+        self.get_old_files()
+        self.list = os.listdir(self.INPUT)  
+        self.convert_pdfs()
+        self.list = set(self.list)   
+        self.input_files = [ # filtra apenas os arquivos válidos
             {'path': os.path.join(self.INPUT, name), 'name': name} 
-            for name in os.listdir(self.INPUT)
-            if os.path.join(self.INPUT, name).lower() not in self.OLD_FILES
-        ]  
-        self.input_files = [ # filtra apenas os arquivos .bmp
-            input_arq for input_arq in input_path 
-            if os.path.isfile(input_arq['path']) and (input_arq['path'].lower().endswith('.bmp'))
+            for name in self.list 
+            if self.validate_type(name.lower()) and (os.path.join(self.INPUT, name).lower() not in self.OLD_FILES) 
         ]
+
+    def convert_pdfs(self):
+        self.pdfs = [ 
+            {'path': os.path.join(self.INPUT, name), 'name': name}  
+            for name in self.list
+            if name.lower().endswith('.pdf') and (os.path.join(self.INPUT, name).lower() not in self.OLD_FILES)
+        ]
+        for pdf in self.pdfs:
+            name = pdf['name']
+            print(f'Convertendo: {name}')
+            pages = convert_from_path(pdf['path'], 500)
+            i=1
+            for page in pages:
+                print(f'Extraindo página {i}')
+                path_without_ext = pdf['path'][:-4]  
+                name_without_ext = pdf['name'][:-4]    
+                page.save(f'{path_without_ext}({i}).jpg', 'JPEG')
+                self.list.append(f'{name_without_ext}({i}).jpg')
+                i= i+1
         
-    
+
+    def validate_type(self, temp_file):
+        if temp_file.endswith('.bmp') or temp_file.endswith('.jpg') or temp_file.endswith('.png'):
+            return True
+        return False
+
     def remove_next(self, text):
         if text[-1:] == '\n':
             if text[-2:] == '\\\n':
@@ -37,29 +62,44 @@ class BarCode:
     def add_next(self, text):
         return f'{text}\n'
     
-    def validade_paths(self):        
+    def validate_paths(self):        
         if not os.path.isdir(self.OUTPUT):
             os.mkdir(self.OUTPUT)
         if os.path.isfile(os.path.join(self.OUTPUT, 'dir.txt')):
-            for dir_ex in open(os.path.join(self.OUTPUT, 'dir.txt'), 'r'):
+            arq = open(os.path.join(self.OUTPUT, 'dir.txt'), 'r')
+            for dir_ex in arq:
                 self.EX_OUTPUT = self.remove_next(dir_ex)
                 if self.EX_OUTPUT.strip(' ') == '':
                     self.EX_OUTPUT = self.create_dir_default('ordem')
                 break
+            arq.close()
         else:
             self.EX_OUTPUT = self.create_dir_default('ordem')
         if os.path.isfile(os.path.join(self.OUTPUT, 'input.txt')):
-            for inp_ex in open(os.path.join(self.OUTPUT, 'input.txt'), 'r'): 
+            arq = open(os.path.join(self.OUTPUT, 'input.txt'), 'r')
+            for inp_ex in arq: 
                 self.INPUT = self.remove_next(inp_ex)
                 if self.INPUT.strip(' ') == '':
                     self.INPUT = self.create_dir_default('input_img')
                 break
+            arq.close()
         else:
             self.INPUT = self.create_dir_default('input_img')
+        if not os.path.isfile('log_tif.txt'):
+            log = open('log_tif.txt', 'w')
+            log.close()
+            self.log_tif = []
+        else:
+            arq = open('log_tif.txt', 'r')
+            self.log_tif = [self.remove_next(name) for name in arq]
+            arq.close()
+        
    
     def get_old_files(self):
         if os.path.isfile(os.path.join(self.OUTPUT, 'old_files.txt')):
-            self.OLD_FILES = [self.remove_next(name.lower()) for name in open(os.path.join(self.OUTPUT, 'old_files.txt'), 'r')]
+            arq = open(os.path.join(self.OUTPUT, 'old_files.txt'), 'r')
+            self.OLD_FILES = [self.remove_next(name.lower()) for name in arq]
+            arq.close()
         else:
             self.OLD_FILES = ''
 
@@ -68,6 +108,22 @@ class BarCode:
         if not os.path.isdir(name):
             os.mkdir(name)
         return os.path.join(os.path.dirname(os.path.realpath(__file__)),name)
+
+    def redirect_img(self, temp_file, code_file):
+        if os.path.isfile(code_file):
+            file1 = open(code_file, 'rb')
+            b1 = io.BytesIO(file1.read())
+            img1 = Image.open(b1)
+            file2 = open(temp_file, 'rb') 
+            b2 = io.BytesIO(file2.read())
+            img2 = Image.open(b2).convert('RGB')
+            img1.save(code_file,format='TIFF', compression='tiff_lzw', save_all=True,append_images=[img2])
+            file1.close()
+            file2.close()
+         
+        else:
+            img = Image.open(temp_file).convert('RGB')
+            img.save(code_file, format='TIFF', compression='tiff_lzw')
 
     def extract_barcode(self):
         print('Extraindo código de imagens ...')
@@ -93,11 +149,15 @@ class BarCode:
                         code = 'Inválido'
                     try:
                         int(code)
-                        if len(code[1:]) == 6:        
-                            if code[1:] not in self.log['success']:
-                                self.log['success'].append(code[1:])
-
-                                shutil.copy(data['path'], os.path.join(self.EX_OUTPUT, f'{code[1:]}.tif'))
+                        code = code[1:]
+                        if len(code) == 6:        
+                            if code not in self.log['success']:
+                                self.log['success'].append(code)
+                                if code not in self.log_tif: 
+                                    self.redirect_img(data['path'], os.path.join(self.EX_OUTPUT, f'{code}.tif'))
+                                    arq = open('log_tif.txt', 'a')
+                                    arq.write(f'{code}\n') 
+                                    arq.close()  
                             file_error = NULL
                             break
                         else:
@@ -124,6 +184,8 @@ class BarCode:
         log_txt = open(os.path.join(self.OUTPUT, 'invalid.txt'), 'w') 
         log_txt.writelines([self.add_next(txt) if txt != self.log['invalid'][-1] else txt for txt in self.log['invalid']])
         log_txt.close()
+        if len(self.pdfs) > 0:
+            self.input_files.extend(self.pdfs)
         log_txt = open(os.path.join(self.OUTPUT, 'end.txt'), 'w') 
         log_txt.writelines([self.add_next(txt['path']) if txt['path'] != self.input_files[-1]['path'] else txt['path'] for txt in self.input_files])
         log_txt.close() 
@@ -140,13 +202,3 @@ if __name__ == "__main__":
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     
-'''
-from PIL import Image
-
-img1 = Image.open(open("test2.tiff", 'rb'))
-img2 = Image.open(open("test.tiff", 'rb'))
-
-img1.save('C:\/Users\/Public\/Pictures\/Sample Pictures\/teste.tif',save_all=True,append_images=[img2])
-
-https://www.devmedia.com.br/forum/como-pegar-via-delphi-a-data-de-criacao-do-arquivo/320595
-'''

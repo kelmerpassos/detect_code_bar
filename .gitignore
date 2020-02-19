@@ -7,3 +7,6 @@
 /build
 /dist
 *.spec
+/output_code
+/ordem
+log_tif.txt
