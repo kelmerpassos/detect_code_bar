@@ -143,6 +143,17 @@ class BarCode:
            if len(detectedBarcodes) == 0:
                detectedBarcodes = NULL
         return detectedBarcodes 
+    
+    def most_likely_barcode(self, list_detect):
+        new_list_detect = []
+        for i, barcode in  enumerate(list_detect):
+            (x, y, w, h) = barcode.rect
+            base = abs(x-(x+w))
+            height = abs(y-(y+h))
+            area = base*height
+            new_list_detect.append((i, area))
+        index = max(new_list_detect, key=lambda x: x[1])
+        return list_detect[index[0]]
 
     def extract_barcode(self):
         print('Extraindo código de imagens ...')
@@ -158,33 +169,31 @@ class BarCode:
             code_type = 'None'
             file_error = NULL 
             if detectedBarcodes:    
-                for barcode in detectedBarcodes:    
-                    (x, y, w, h) = barcode.rect
-                    cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5) 
-                    code_type = barcode.type
-                    if code_type == 'CODE39':               
-                        code = barcode.data.decode('utf-8')
+                barcode = self.most_likely_barcode(detectedBarcodes)    
+                # (x, y, w, h) = barcode.rect
+                # cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5) 
+                code_type = barcode.type
+                if code_type == 'CODE39':               
+                    code = barcode.data.decode('utf-8')
+                else:
+                    code = 'Inválido'
+                try:
+                    int(code)
+                    code = code[1:]
+                    if len(code) == 6:        
+                        if code not in self.log['success']:
+                            self.log['success'].append(code)
+                            if code not in self.log_tif: 
+                                self.redirect_img(data['path'], os.path.join(self.EX_OUTPUT, f'{code}.tif'))
+                                arq = open('log_tif.txt', 'a')
+                                arq.write(f'{code}\n') 
+                                arq.close()  
                     else:
-                        code = 'Inválido'
-                    try:
-                        int(code)
-                        code = code[1:]
-                        if len(code) == 6:        
-                            if code not in self.log['success']:
-                                self.log['success'].append(code)
-                                if code not in self.log_tif: 
-                                    self.redirect_img(data['path'], os.path.join(self.EX_OUTPUT, f'{code}.tif'))
-                                    arq = open('log_tif.txt', 'a')
-                                    arq.write(f'{code}\n') 
-                                    arq.close()  
-                            file_error = NULL
-                            break
-                        else:
-                            if data['path'] not in self.log['error']:
-                                file_error = data['path']
-                    except ValueError:
                         if data['path'] not in self.log['error']:
                             file_error = data['path']
+                except ValueError:
+                    if data['path'] not in self.log['error']:
+                        file_error = data['path']
                 if file_error is not NULL:
                     self.log['error'].append(file_error) 
             else:

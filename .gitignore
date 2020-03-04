@@ -9,4 +9,11 @@
 *.spec
 /output_code
 /ordem
-log_tif.txt
+log_tif.
+*.pdf
+*.png
+*.tif
+*.tiff
+*.jpg
+*.jpeg
+*.bmp
