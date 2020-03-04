@@ -1,6 +1,4 @@
-import glob
 import os
-import shutil
 from asyncio.windows_events import NULL
 import io
 from sys import exit
@@ -8,6 +6,7 @@ from cv2 import cv2
 from pdf2image import convert_from_path
 from PIL import Image
 from pyzbar.pyzbar import decode
+from numpy import array as np_array 
 
 
 class BarCode:
@@ -47,7 +46,7 @@ class BarCode:
         
 
     def validate_type(self, temp_file):
-        if temp_file.endswith('.bmp') or temp_file.endswith('.jpg') or temp_file.endswith('.png'):
+        if temp_file.endswith('.bmp') or temp_file.endswith('.jpg') or temp_file.endswith('.png') or temp_file.endswith('.tif'):
             return True
         return False
 
@@ -125,6 +124,26 @@ class BarCode:
             img = Image.open(temp_file).convert('RGB')
             img.save(code_file, format='TIFF', compression='tiff_lzw')
 
+    def extract_black(self, image):
+        # Convert BGR to HSV
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # define range of black color in HSV
+        lower_val = np_array([0,0,0])
+        upper_val = np_array([179,255,127])
+        # Threshold the HSV image to get only black colors
+        mask = cv2.inRange(hsv, lower_val, upper_val)
+        # invert mask to get black symbols on white background
+        mask_inv = cv2.bitwise_not(mask)
+        return mask_inv
+    
+    def detect_bar(self, image):
+        detectedBarcodes = decode(self.extract_black(image))
+        if len(detectedBarcodes) == 0:
+           detectedBarcodes = decode(image)
+           if len(detectedBarcodes) == 0:
+               detectedBarcodes = NULL
+        return detectedBarcodes 
+
     def extract_barcode(self):
         print('Extraindo código de imagens ...')
         self.log = {'error':[], 'success': [], 'invalid': []}
@@ -134,11 +153,11 @@ class BarCode:
         for data in self.input_files:
             image = cv2.imread(data['path']) 
             name = data['name'][:-4] 
-            detectedBarcodes = decode(image)
+            detectedBarcodes = self.detect_bar(image)
             code = 'None'
             code_type = 'None'
             file_error = NULL 
-            if len(detectedBarcodes) != 0:    
+            if detectedBarcodes:    
                 for barcode in detectedBarcodes:    
                     (x, y, w, h) = barcode.rect
                     cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 5) 
