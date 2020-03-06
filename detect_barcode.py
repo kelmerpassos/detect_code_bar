@@ -84,16 +84,37 @@ class BarCode:
             arq.close()
         else:
             self.INPUT = self.create_dir_default('input_img')
-        if not os.path.isfile('log_tif.txt'):
-            log = open('log_tif.txt', 'w')
-            log.close()
-            self.log_tif = []
+
+        self.path_log = ''
+        if os.path.isfile('logconfig.ini'):
+            with open('logconfig.ini', 'r') as arq:
+                self.path_log = self.remove_next(arq.readline()) 
+                if os.path.isdir(self.path_log):
+                    if os.path.isfile(os.path.join(self.path_log, 'log_tif.ini')):    
+                        with open(os.path.join(self.path_log, 'log_tif.ini'), 'r') as arq_aux:
+                            self.log_tif = [self.remove_next(name) for name in arq_aux]
+                    else:
+                        with open(os.path.join(self.path_log, 'log_tif.ini'), 'w') as arq_aux:
+                            self.log_tif = []
+                else:
+                    self.path_log = ''
+                    if os.path.isfile('log_tif.ini'):
+                        with open('log_tif.ini', 'r') as arq_aux:
+                            self.log_tif = [self.remove_next(name) for name in arq_aux]
+                    else:    
+                        with open('log_tif.ini', 'w') as arq_aux:
+                            self.log_tif = []  
         else:
-            arq = open('log_tif.txt', 'r')
-            self.log_tif = [self.remove_next(name) for name in arq]
-            arq.close()
-        
-   
+            with open('logconfig.ini', 'w') as arq:
+                if os.path.isfile('log_tif.ini'):
+                    with open('log_tif.ini', 'r') as arq_aux:
+                        self.log_tif = [self.remove_next(name) for name in arq_aux]
+                else:    
+                    with open('log_tif.ini', 'w') as arq_aux:
+                        self.log_tif = []
+                arq.write(os.path.abspath('')+'\\')
+            
+           
     def get_old_files(self):
         if os.path.isfile(os.path.join(self.OUTPUT, 'old_files.txt')):
             arq = open(os.path.join(self.OUTPUT, 'old_files.txt'), 'r')
@@ -185,7 +206,11 @@ class BarCode:
                             self.log['success'].append(code)
                             if code not in self.log_tif: 
                                 self.redirect_img(data['path'], os.path.join(self.EX_OUTPUT, f'{code}.tif'))
-                                arq = open('log_tif.txt', 'a')
+                                arq = NULL
+                                if self.path_log == '':
+                                    arq = open('log_tif.ini', 'a')
+                                else:
+                                    arq = open(os.path.join(self.path_log, 'log_tif.ini'), 'a')
                                 arq.write(f'{code}\n') 
                                 arq.close()  
                     else:
