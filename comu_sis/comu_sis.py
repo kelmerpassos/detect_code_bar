@@ -1,10 +1,13 @@
+from utilities import Utils
+from os import path, mkdir, name as os_name
+
 class ComuSis:
-    def __init__():
+    def __init__(self):
         self.INPUT = ''
         self.OUTPUT = ''
         self.EX_OUTPUT = ''
         self.path_log = '' 
-        self.OLD_FILES = '' 
+        self.old_files = '' 
 
     def validate_type(self, temp_file):
         if temp_file.endswith('.bmp') or temp_file.endswith('.jpg') or temp_file.endswith('.png') or temp_file.endswith('.tif'):
@@ -12,22 +15,22 @@ class ComuSis:
         return False
 
     def validate_paths(self):        
-        if not os.path.isdir(self.OUTPUT):
-            os.mkdir(self.OUTPUT)
-        if os.path.isfile(os.path.join(self.OUTPUT, 'dir.txt')):
-            arq = open(os.path.join(self.OUTPUT, 'dir.txt'), 'r')
+        if not path.isdir(self.OUTPUT):
+            mkdir(self.OUTPUT)
+        if path.isfile(path.join(self.OUTPUT, 'dir.txt')):
+            arq = open(path.join(self.OUTPUT, 'dir.txt'), 'r')
             for dir_ex in arq:
-                self.EX_OUTPUT = self.remove_next(dir_ex)
+                self.EX_OUTPUT = Utils.remove_next(dir_ex)
                 if self.EX_OUTPUT.strip(' ') == '':
                     self.EX_OUTPUT = self.create_dir_default('ordem')
                 break
             arq.close()
         else:
             self.EX_OUTPUT = self.create_dir_default('ordem')
-        if os.path.isfile(os.path.join(self.OUTPUT, 'input.txt')):
-            arq = open(os.path.join(self.OUTPUT, 'input.txt'), 'r')
+        if path.isfile(path.join(self.OUTPUT, 'input.txt')):
+            arq = open(path.join(self.OUTPUT, 'input.txt'), 'r')
             for inp_ex in arq: 
-                self.INPUT = self.remove_next(inp_ex)
+                self.INPUT = Utils.remove_next(inp_ex)
                 if self.INPUT.strip(' ') == '':
                     self.INPUT = self.create_dir_default('input_img')
                 break
@@ -36,45 +39,49 @@ class ComuSis:
             self.INPUT = self.create_dir_default('input_img')
 
         self.path_log = ''
-        if os.path.isfile('logconfig.ini'):
+        if path.isfile('logconfig.ini'):
             with open('logconfig.ini', 'r') as arq:
-                self.path_log = self.remove_next(arq.readline()) 
-                if os.path.isdir(self.path_log):
-                    if os.path.isfile(os.path.join(self.path_log, 'log_tif.ini')):    
-                        with open(os.path.join(self.path_log, 'log_tif.ini'), 'r') as arq_aux:
-                            self.log_tif = [self.remove_next(name) for name in arq_aux]
+                self.path_log = Utils.remove_next(arq.readline()) 
+                if path.isdir(self.path_log):
+                    if path.isfile(path.join(self.path_log, 'log_tif.ini')):    
+                        with open(path.join(self.path_log, 'log_tif.ini'), 'r') as arq_aux:
+                            self.log_tif = [Utils.remove_next(name) for name in arq_aux]
                     else:
-                        with open(os.path.join(self.path_log, 'log_tif.ini'), 'w') as arq_aux:
+                        with open(path.join(self.path_log, 'log_tif.ini'), 'w') as arq_aux:
                             self.log_tif = []
                 else:
                     self.path_log = ''
-                    if os.path.isfile('log_tif.ini'):
+                    if path.isfile('log_tif.ini'):
                         with open('log_tif.ini', 'r') as arq_aux:
-                            self.log_tif = [self.remove_next(name) for name in arq_aux]
+                            self.log_tif = [Utils.remove_next(name) for name in arq_aux]
                     else:    
                         with open('log_tif.ini', 'w') as arq_aux:
                             self.log_tif = []  
         else:
             with open('logconfig.ini', 'w') as arq:
-                if os.path.isfile('log_tif.ini'):
+                if path.isfile('log_tif.ini'):
                     with open('log_tif.ini', 'r') as arq_aux:
-                        self.log_tif = [self.remove_next(name) for name in arq_aux]
+                        self.log_tif = [Utils.remove_next(name) for name in arq_aux]
                 else:    
                     with open('log_tif.ini', 'w') as arq_aux:
                         self.log_tif = []
-                arq.write(os.path.abspath('')+'\\')
+                if os_name != 'posix':
+                    arq.write(path.abspath('')+'\\')
+                else:
+                    arq.write(path.abspath('')+'/')
 
         
     def get_old_files(self):
-        if os.path.isfile(os.path.join(self.OUTPUT, 'old_files.txt')):
-            arq = open(os.path.join(self.OUTPUT, 'old_files.txt'), 'r')
-            self.OLD_FILES = [self.remove_next(name.lower()) for name in arq]
+        if path.isfile(path.join(self.OUTPUT, 'old_files.txt')):
+            arq = open(path.join(self.OUTPUT, 'old_files.txt'), 'r')
+            self.old_files = [Utils.remove_next(name.lower()) for name in arq]
             arq.close()
         else:
-            self.OLD_FILES = ''
+            self.old_files = ''
+        return self.old_files
 
 
     def create_dir_default(self, name):
-        if not os.path.isdir(name):
-            os.mkdir(name)
-        return os.path.join(os.path.dirname(os.path.realpath(__file__)),name)
+        if not path.isdir(name):
+            mkdir(name)
+        return path.join(path.dirname(path.realpath(__file__)),name)

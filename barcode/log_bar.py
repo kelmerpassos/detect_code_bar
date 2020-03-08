@@ -5,7 +5,7 @@ class LogBar:
         self.invalid = []
 
     def convert_dict(self):
-        return = {
+        return  {
             'sucess': self.sucess,
             'error': self.error,
             'invalid': self.invalid,

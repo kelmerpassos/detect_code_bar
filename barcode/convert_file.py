@@ -1,11 +1,17 @@
+from pdf2image import convert_from_path
+from PIL import Image
+import io
+from os import path
+
+
 class ConvertFile:
     def __init__(self):
         self._pdfs = []
     
     def convert_tiff(self, temp_file, dest_file=None):
-        if dest_file = None:
+        if dest_file == None:
             pass
-        elif os.path.isfile(dest_file):
+        elif path.isfile(dest_file):
             with open(dest_file, 'rb') as file1:
                 b1 = io.BytesIO(file1.read())
                 img1 = Image.open(b1)
@@ -20,9 +26,9 @@ class ConvertFile:
 
     def convert_pdfs(self, path, list_files=[], list_restriction=[]):
         self._pdfs = ( 
-            {'path': os.path.join(path, name), 'name': name}  
-            for name in self.list
-            if name.lower().endswith('.pdf') and (os.path.join(path, name).lower() not in self.list_restriction)
+            {'path': path.join(path, name), 'name': name}  
+            for name in list_files
+            if name.lower().endswith('.pdf') and (path.join(path, name).lower() not in list_restriction)
         )
         for pdf in self._pdfs:
             name = pdf['name']
@@ -34,5 +40,5 @@ class ConvertFile:
                 path_without_ext = pdf['path'][:-4]  
                 name_without_ext = pdf['name'][:-4]    
                 page.save(f'{path_without_ext}({i}).jpg', 'JPEG')
-                self.list.append(f'{name_without_ext}({i}).jpg')
+                list_files.append(f'{name_without_ext}({i}).jpg')
                 i= i+1

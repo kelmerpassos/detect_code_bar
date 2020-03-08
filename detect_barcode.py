@@ -9,6 +9,12 @@ from pyzbar.pyzbar import decode
 from numpy import array as np_array 
 
 
+
+from barcode.convert_file import ConvertFile
+from barcode.extract_barcode import ExtractBarCode
+from comu_sis.comu_sis import ComuSis 
+
+
 class BarCode:
     OUTPUT = 'output_code'
 
@@ -250,8 +256,7 @@ class BarCode:
         print('________________________________')
 
 if __name__ == "__main__":       
-    bar_code = BarCode()
-    bar_code.extract_barcode()
+    
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     
