@@ -13,6 +13,7 @@ from numpy import array as np_array
 from barcode.convert_file import ConvertFile
 from barcode.extract_barcode import ExtractBarCode
 from comu_sis.comu_sis import ComuSis 
+from comu_sis.utilities import Utils
 
 
 class BarCode:
@@ -256,7 +257,27 @@ class BarCode:
         print('________________________________')
 
 if __name__ == "__main__":       
-    
+    comunic = ComuSis('output_code')
+    convert_files = ConvertFile()
+    comunic.list = set(
+        convert_files.convert_pdfs(
+            path=comunic.input, 
+            list_files=comunic.map_files(), 
+            list_restriction=comunic.get_old_files()
+        )
+    )
+    barcode = ExtractBarCode(files=comunic.filter_valid())
+    log, img_redirect = barcode.extract_barcode()
+    Utils.redirect_and_save(
+        dict_img=img_redirect,
+        restrict=comunic.log_tif,
+        new_path=comunic.img_output,
+        arq_log=comunic.get_file_log()
+    )
+    comunic.finish(
+        log=log.convert_dict(),
+        pdfs=convert_files.pdfs,
+    )
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     

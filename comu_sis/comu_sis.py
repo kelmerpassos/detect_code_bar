@@ -1,13 +1,17 @@
 from utilities import Utils
-from os import path, mkdir, name as os_name
+from os import path, mkdir, listdir, name as os_name
 
 class ComuSis:
-    def __init__(self):
-        self.INPUT = ''
-        self.OUTPUT = ''
-        self.EX_OUTPUT = ''
-        self.path_log = '' 
-        self.old_files = '' 
+    def __init__(self, output):
+        self.input = ''
+        self.output = output
+        self.img_output = ''
+        self.path_log = ''
+        self.log_tif = []
+        self.old_files = ''
+        self.validate_paths()
+        self.list = []
+        self.input_files = []
 
     def validate_type(self, temp_file):
         if temp_file.endswith('.bmp') or temp_file.endswith('.jpg') or temp_file.endswith('.png') or temp_file.endswith('.tif'):
@@ -15,28 +19,28 @@ class ComuSis:
         return False
 
     def validate_paths(self):        
-        if not path.isdir(self.OUTPUT):
-            mkdir(self.OUTPUT)
-        if path.isfile(path.join(self.OUTPUT, 'dir.txt')):
-            arq = open(path.join(self.OUTPUT, 'dir.txt'), 'r')
+        if not path.isdir(self.output):
+            mkdir(self.output)
+        if path.isfile(path.join(self.output, 'dir.txt')):
+            arq = open(path.join(self.output, 'dir.txt'), 'r')
             for dir_ex in arq:
-                self.EX_OUTPUT = Utils.remove_next(dir_ex)
-                if self.EX_OUTPUT.strip(' ') == '':
-                    self.EX_OUTPUT = self.create_dir_default('ordem')
+                self.img_output = Utils.remove_next(dir_ex)
+                if self.img_output.strip(' ') == '':
+                    self.img_output = self.create_dir_default('ordem')
                 break
             arq.close()
         else:
-            self.EX_OUTPUT = self.create_dir_default('ordem')
-        if path.isfile(path.join(self.OUTPUT, 'input.txt')):
-            arq = open(path.join(self.OUTPUT, 'input.txt'), 'r')
+            self.img_output = self.create_dir_default('ordem')
+        if path.isfile(path.join(self.output, 'input.txt')):
+            arq = open(path.join(self.output, 'input.txt'), 'r')
             for inp_ex in arq: 
-                self.INPUT = Utils.remove_next(inp_ex)
-                if self.INPUT.strip(' ') == '':
-                    self.INPUT = self.create_dir_default('input_img')
+                self.input = Utils.remove_next(inp_ex)
+                if self.input.strip(' ') == '':
+                    self.input = self.create_dir_default('input_img')
                 break
             arq.close()
         else:
-            self.INPUT = self.create_dir_default('input_img')
+            self.input = self.create_dir_default('input_img')
 
         self.path_log = ''
         if path.isfile('logconfig.ini'):
@@ -72,8 +76,8 @@ class ComuSis:
 
         
     def get_old_files(self):
-        if path.isfile(path.join(self.OUTPUT, 'old_files.txt')):
-            arq = open(path.join(self.OUTPUT, 'old_files.txt'), 'r')
+        if path.isfile(path.join(self.output, 'old_files.txt')):
+            arq = open(path.join(self.output, 'old_files.txt'), 'r')
             self.old_files = [Utils.remove_next(name.lower()) for name in arq]
             arq.close()
         else:
@@ -84,4 +88,36 @@ class ComuSis:
     def create_dir_default(self, name):
         if not path.isdir(name):
             mkdir(name)
-        return path.join(path.dirname(path.realpath(__file__)),name)
+        return path.join(path.realpath(''),name)
+
+    def map_files(self):
+        self.list = listdir(self.input)
+        return self.list
+
+    def filter_valid(self):
+        self.input_files = ( # filtra apenas os arquivos válidos
+            {'path': os.path.join(self.input, name), 'name': name} 
+            for name in self.list 
+            if self.validate_type(name.lower()) and (os.path.join(self.input, name).lower() not in self.old_files) 
+        )
+        return self.input_files
+    
+    def get_file_log(self):
+        arq = open(os.path.join(self.path_log, 'log_tif.ini'), 'a')
+        return arq
+
+    def finish(self, log, pdfs):
+        log_txt = open(os.path.join(self.output, 'error.txt'), 'w') 
+        log_txt.writelines([Utils.add_next(txt) if txt  != log['error'][-1] else txt for txt in log['error']])
+        log_txt.close() 
+        log_txt = open(os.path.join(self.output, 'success.txt'), 'w') 
+        log_txt.writelines([Utils.add_next(txt) if txt != log['success'][-1] else txt for txt in log['success']])
+        log_txt.close()  
+        log_txt = open(os.path.join(self.output, 'invalid.txt'), 'w') 
+        log_txt.writelines([Utils.add_next(txt) if txt != log['invalid'][-1] else txt for txt in log['invalid']])
+        log_txt.close()
+        if len(pdfs) > 0:
+            self.input_files.extend(pdfs)
+        log_txt = open(os.path.join(self.output, 'end.txt'), 'w') 
+        log_txt.writelines([Utils.add_next(txt['path']) if txt['path'] != self.input_files[-1]['path'] else txt['path'] for txt in self.input_files])
+        log_txt.close() 

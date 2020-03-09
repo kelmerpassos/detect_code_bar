@@ -6,7 +6,7 @@ from os import path
 
 class ConvertFile:
     def __init__(self):
-        self._pdfs = []
+        self.pdfs = []
     
     def convert_tiff(self, temp_file, dest_file=None):
         if dest_file == None:
@@ -25,12 +25,12 @@ class ConvertFile:
             img.save(dest_file, format='TIFF', compression='tiff_lzw')
 
     def convert_pdfs(self, path, list_files=[], list_restriction=[]):
-        self._pdfs = ( 
+        self.pdfs = ( 
             {'path': path.join(path, name), 'name': name}  
             for name in list_files
             if name.lower().endswith('.pdf') and (path.join(path, name).lower() not in list_restriction)
         )
-        for pdf in self._pdfs:
+        for pdf in self.pdfs:
             name = pdf['name']
             print(f'Convertendo: {name}')
             pages = convert_from_path(pdf['path'], 500)
@@ -42,3 +42,4 @@ class ConvertFile:
                 page.save(f'{path_without_ext}({i}).jpg', 'JPEG')
                 list_files.append(f'{name_without_ext}({i}).jpg')
                 i= i+1
+        return list_files
